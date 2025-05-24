@@ -1,4 +1,4 @@
-name: Build and deploy Node.js app to Azure Web App - chatibero
+name: Build and deploy React app to Azure Web App - chatibero
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read # This is required for actions/checkout
+      contents: read # Requerido para actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -20,21 +20,21 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: npm install, build, and test (in frontend/)
+      - name: Install dependencies and build React app
         working-directory: ./frontend
         run: |
           npm install
-          npm run build --if-present
+          npm run build
 
-      - name: Zip artifact for deployment
+      - name: Zip React build for deployment
         run: |
-          cd frontend
-          zip -r ../release.zip .
+          cd frontend/build
+          zip -r ../../release.zip ./*
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: node-app
+          name: react-app
           path: release.zip
 
   deploy:
@@ -44,17 +44,14 @@ jobs:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
-      id-token: write # Required for requesting the JWT
-      contents: read  # Required for actions/checkout
+      id-token: write # Para autenticación con Azure
+      contents: read
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: node-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
+          name: react-app
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -69,4 +66,4 @@ jobs:
         with:
           app-name: 'chatibero'
           slot-name: 'Production'
-          package: .
+          package: release.zip
